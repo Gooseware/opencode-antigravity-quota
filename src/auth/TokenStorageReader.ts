@@ -5,6 +5,9 @@ import * as os from 'os';
 export interface AccountMetadataV3 {
   refreshToken: string;
   email: string;
+  addedAt?: number;
+  lastUsed?: number;
+  coolingDownUntil?: number;
 }
 
 export interface AccountStorageV3 {

@@ -1,0 +1,66 @@
+import { AccountRotator } from '../../src/auth/AccountRotator';
+import { AccountMetadataV3 } from '../../src/auth/TokenStorageReader';
+
+describe('AccountRotator', () => {
+  const createAccount = (token: string, coolingDownUntil?: number): AccountMetadataV3 => ({
+    refreshToken: token,
+    email: `${token}@example.com`,
+    addedAt: 0,
+    lastUsed: 0,
+    coolingDownUntil
+  });
+
+  it('should return the account at the initial index', () => {
+    const accounts = [createAccount('t1'), createAccount('t2')];
+    const rotator = new AccountRotator(accounts, 0);
+    expect(rotator.getCurrentAccount()?.refreshToken).toBe('t1');
+  });
+
+  it('should rotate to next account when marked exhausted', () => {
+    const accounts = [createAccount('t1'), createAccount('t2')];
+    const rotator = new AccountRotator(accounts, 0); 
+    
+    expect(rotator.getCurrentAccount()?.refreshToken).toBe('t1');
+    
+    rotator.markCurrentExhausted(10000);
+    
+    expect(rotator.getCurrentAccount()?.refreshToken).toBe('t2');
+  });
+
+  it('should wrap around when rotating', () => {
+    const accounts = [createAccount('t1'), createAccount('t2')];
+    const rotator = new AccountRotator(accounts, 1);
+    
+    expect(rotator.getCurrentAccount()?.refreshToken).toBe('t2');
+    
+    rotator.markCurrentExhausted(10000);
+    
+    expect(rotator.getCurrentAccount()?.refreshToken).toBe('t1');
+  });
+
+  it('should skip cooled down accounts', () => {
+     const future = Date.now() + 10000;
+     const accounts = [
+        createAccount('t1', future),
+        createAccount('t2')
+     ];
+     const rotator = new AccountRotator(accounts, 0);
+     expect(rotator.getCurrentAccount()?.refreshToken).toBe('t2');
+  });
+
+  it('should return account with soonest expiry if ALL are cooling down', () => {
+    const now = Date.now();
+    const accounts = [
+       createAccount('t1', now + 20000), 
+       createAccount('t2', now + 10000)
+    ];
+    const rotator = new AccountRotator(accounts, 0);
+    
+    expect(rotator.getCurrentAccount()?.refreshToken).toBe('t2');
+  });
+
+  it('should handle empty account list', () => {
+      const rotator = new AccountRotator([], 0);
+      expect(rotator.getCurrentAccount()).toBeNull();
+  });
+});
