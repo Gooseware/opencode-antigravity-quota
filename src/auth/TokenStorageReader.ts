@@ -1,0 +1,67 @@
+import * as fs from 'fs';
+import * as path from 'path';
+import * as os from 'os';
+
+export interface AccountMetadataV3 {
+  refreshToken: string;
+  email: string;
+}
+
+export interface AccountStorageV3 {
+  version: number;
+  accounts: AccountMetadataV3[];
+  activeIndex: number;
+}
+
+export class TokenStorageReader {
+  private accounts: AccountMetadataV3[] = [];
+  private activeIndex: number = -1;
+
+  constructor() {
+    this.load();
+  }
+
+  public getAccounts(): AccountMetadataV3[] {
+    return this.accounts;
+  }
+
+  public getActiveIndex(): number {
+    return this.activeIndex;
+  }
+
+  private load(): void {
+    const storagePath = this.getStoragePath();
+    
+    if (!fs.existsSync(storagePath)) {
+      console.warn(`Token storage file not found at ${storagePath}`);
+      return;
+    }
+
+    try {
+      const content = fs.readFileSync(storagePath, 'utf-8');
+      const data = JSON.parse(content);
+
+      if (data.version !== 3) {
+        console.warn(`Unsupported storage version: ${data.version}. Expected version 3.`);
+        return;
+      }
+
+      const storage = data as AccountStorageV3;
+      this.accounts = storage.accounts || [];
+      this.activeIndex = storage.activeIndex ?? -1;
+
+    } catch (error) {
+      console.error('Failed to parse token storage file:', error);
+    }
+  }
+
+  private getStoragePath(): string {
+    const xdgConfigHome = process.env.XDG_CONFIG_HOME;
+    if (xdgConfigHome) {
+        return path.join(xdgConfigHome, 'opencode', 'antigravity-accounts.json');
+    }
+    
+    const homeDir = os.homedir();
+    return path.join(homeDir, '.config', 'opencode', 'antigravity-accounts.json');
+  }
+}
