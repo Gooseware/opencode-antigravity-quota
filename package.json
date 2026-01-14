@@ -1,17 +1,47 @@
 {
-  "name": "quota",
+  "name": "opencode-antigravity-quota",
   "version": "1.0.0",
-  "main": "index.js",
-  "directories": {
-    "doc": "docs"
+  "description": "Quota management and model rotation for opencode-antigravity-auth",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "type": "module",
+  "license": "MIT",
+  "author": "gooseware",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gooseware/opencode-antigravity-quota.git"
   },
+  "homepage": "https://github.com/gooseware/opencode-antigravity-quota#readme",
+  "bugs": {
+    "url": "https://github.com/gooseware/opencode-antigravity-quota/issues"
+  },
+  "keywords": [
+    "opencode",
+    "antigravity",
+    "quota",
+    "model-rotation",
+    "oh-my-opencode",
+    "gemini",
+    "claude"
+  ],
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "files": [
+    "dist/",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
-    "test": "jest"
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "prepublishOnly": "npm run build"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "description": "",
+  "dependencies": {
+    "axios": "^1.13.2"
+  },
   "devDependencies": {
     "@types/express": "^5.0.6",
     "@types/jest": "^30.0.0",
@@ -20,7 +50,7 @@
     "ts-jest": "^29.4.6",
     "typescript": "^5.9.3"
   },
-  "dependencies": {
-    "axios": "^1.13.2"
+  "peerDependencies": {
+    "opencode-antigravity-auth": "^1.2.8"
   }
 }

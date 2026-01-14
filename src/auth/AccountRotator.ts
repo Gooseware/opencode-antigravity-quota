@@ -46,7 +46,7 @@ export class AccountRotator {
     return this.accounts[this.activeIndex];
   }
 
-  public markCurrentExhausted(cooldownMs: number = 0): number {
+  public markCurrentExhausted(cooldownMs: number = 30 * 60 * 1000): number {
     if (this.accounts.length === 0) {
         return -1;
     }

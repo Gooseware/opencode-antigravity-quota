@@ -79,6 +79,16 @@ describe('AccountRotator', () => {
     expect(rotator.getCurrentAccount()?.refreshToken).toBe('t2');
   });
 
+  it('should use default cooldown of 30 minutes when not specified', () => {
+    const accounts = [createAccount('t1'), createAccount('t2')];
+    const rotator = new AccountRotator(accounts, 0);
+    
+    const now = Date.now();
+    rotator.markCurrentExhausted();
+    
+    expect(rotator.getCurrentAccount()?.refreshToken).toBe('t2');
+  });
+
   it('should not be affected by external modification of accounts array', () => {
       const accounts = [createAccount('t1')];
       const rotator = new AccountRotator(accounts, 0);

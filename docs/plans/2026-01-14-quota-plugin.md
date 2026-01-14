@@ -1,77 +1,51 @@
-# Antigravity Quota Plugin Implementation Plan
+# Antigravity Quota Plugin Implementation Plan (Updated)
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
-**Goal:** Implement `opencode-antigravity-quota` plugin to enable OpenCode to use Antigravity quota pool via OAuth 2.0 and provide real-time quota telemetry.
+**Goal:** Implement `opencode-antigravity-quota` plugin to provide real-time quota telemetry and manage account rotation using existing authenticated sessions from `opencode-antigravity-auth`.
 
-**Architecture:** A Node.js based plugin with an Authentication Module (OAuth flow, Token Storage), Quota Acquisition Module (LSP Sniffing, Remote Header Inspection), and an Account Rotation "Load Balancer".
+**Architecture:** A Node.js based plugin. It reads tokens from the existing `opencode-antigravity-auth` storage (V3 schema), implements "Passive" quota acquisition via LSP sniffing, "Active" via header inspection, and an Account Rotation "Load Balancer" to switch accounts upon exhaustion.
 
 **Tech Stack:** TypeScript, Node.js (fs, child_process, http), Jest (testing), Axios (HTTP requests).
 
-### Task 1: Project Skeleton & Configuration
+### Task 1: Project Skeleton & Configuration (Completed)
+
+*Already completed in previous session.*
+
+### Task 2: Token Storage Reader (V3 Schema)
 
 **Files:**
-- Create: `package.json`
-- Create: `tsconfig.json`
-- Create: `jest.config.js`
-- Create: `src/index.ts`
-- Test: `tests/index.test.ts`
+- Create: `src/auth/TokenStorageReader.ts`
+- Test: `tests/auth/TokenStorageReader.test.ts`
 
 **Step 1: Write failing test**
 ```typescript
-// tests/index.test.ts
-import { activate } from '../src/index';
-
-describe('Plugin Activation', () => {
-  it('should be defined', () => {
-    expect(activate).toBeDefined();
-  });
-});
-```
-
-**Step 2: Run test (Verify Failure)**
-Run: `npm test`
-Expected: FAIL (Cannot find module)
-
-**Step 3: Implementation**
-- Initialize `package.json` with `npm init -y`
-- Install dev dependencies: `typescript`, `jest`, `ts-jest`, `@types/jest`, `@types/node`
-- Configure `tsconfig.json` and `jest.config.js`
-- Create `src/index.ts` with empty `activate` function.
-
-**Step 4: Run test (Verify Pass)**
-Run: `npm test`
-Expected: PASS
-
-**Step 5: Commit**
-```bash
-git add .
-git commit -m "chore: setup project skeleton"
-```
-
-### Task 2: Token Storage Manager
-
-**Files:**
-- Create: `src/auth/TokenStore.ts`
-- Test: `tests/auth/TokenStore.test.ts`
-
-**Step 1: Write failing test**
-```typescript
-import { TokenStore } from '../../src/auth/TokenStore';
+import { TokenStorageReader } from '../../src/auth/TokenStorageReader';
 import * as fs from 'fs';
 import * as path from 'path';
 
 jest.mock('fs');
 
-describe('TokenStore', () => {
-  it('should save tokens with 600 permissions', () => {
-    const store = new TokenStore();
-    store.saveTokens([{ refresh_token: 'abc' }]);
-    expect(fs.writeFileSync).toHaveBeenCalledWith(
-      expect.stringContaining('antigravity-accounts.json'),
-      expect.any(String),
-      expect.objectContaining({ mode: 0o600 })
-    );
+describe('TokenStorageReader', () => {
+  const mockV3Data = {
+    version: 3,
+    accounts: [
+      { refreshToken: 'rt1', email: 'test1@gmail.com' },
+      { refreshToken: 'rt2', email: 'test2@gmail.com' }
+    ],
+    activeIndex: 0
+  };
+
+  it('should load and parse V3 accounts', () => {
+    (fs.existsSync as jest.Mock).mockReturnValue(true);
+    (fs.readFileSync as jest.Mock).mockReturnValue(JSON.stringify(mockV3Data));
+    
+    const reader = new TokenStorageReader();
+    const accounts = reader.getAccounts();
+    
+    expect(accounts).toHaveLength(2);
+    expect(accounts[0].refreshToken).toBe('rt1');
+    expect(reader.getActiveIndex()).toBe(0);
   });
 });
 ```
@@ -81,9 +55,10 @@ Run: `npm test`
 Expected: FAIL
 
 **Step 3: Implementation**
-- Implement `TokenStore` class.
-- Method `saveTokens(tokens: any[])`: write to `~/.config/opencode/antigravity-accounts.json` with mode `0o600`.
-- Method `loadTokens()`: read and parse JSON.
+- Implement `TokenStorageReader`.
+- Define interfaces for `AccountStorageV3` and `AccountMetadataV3`.
+- `getStoragePath()`: Resolve `~/.config/opencode/antigravity-accounts.json` (handle XDG/Platform logic).
+- `load()`: Read file, validate `version: 3`, parse `accounts` and `activeIndex`.
 
 **Step 4: Run test**
 Run: `npm test`
@@ -91,53 +66,11 @@ Expected: PASS
 
 **Step 5: Commit**
 ```bash
-git add src/auth/TokenStore.ts tests/auth/TokenStore.test.ts
-git commit -m "feat: implement secure token storage"
+git add src/auth/TokenStorageReader.ts tests/auth/TokenStorageReader.test.ts
+git commit -m "feat: implement token storage reader for V3 schema"
 ```
 
-### Task 3: OAuth 2.0 Headless Client
-
-**Files:**
-- Create: `src/auth/OAuthClient.ts`
-- Modify: `src/index.ts` (export)
-- Test: `tests/auth/OAuthClient.test.ts`
-
-**Step 1: Write failing test**
-```typescript
-import { OAuthClient } from '../../src/auth/OAuthClient';
-
-describe('OAuthClient', () => {
-  it('should generate correct auth URL', () => {
-    const client = new OAuthClient();
-    const url = client.getAuthUrl();
-    expect(url).toContain('accounts.google.com');
-    expect(url).toContain('cloudaicompanion');
-    expect(url).toContain('1071006060591');
-  });
-});
-```
-
-**Step 2: Run test**
-Run: `npm test`
-Expected: FAIL
-
-**Step 3: Implementation**
-- Implement `OAuthClient`.
-- `getAuthUrl()`: Construct URL with required scopes and client ID.
-- `startLocalServer()`: Spin up `http` server on random port to capture code.
-- `exchangeCode(code)`: POST to google token endpoint.
-
-**Step 4: Run test**
-Run: `npm test`
-Expected: PASS
-
-**Step 5: Commit**
-```bash
-git add src/auth/OAuthClient.ts tests/auth/OAuthClient.test.ts
-git commit -m "feat: implement oauth client"
-```
-
-### Task 4: LSP Process Discovery (Passive Strategy)
+### Task 3: LSP Process Discovery (Passive Strategy)
 
 **Files:**
 - Create: `src/quota/LSPFinder.ts`
@@ -153,6 +86,7 @@ jest.mock('child_process');
 describe('LSPFinder', () => {
   it('should find antigravity process', async () => {
     (exec as unknown as jest.Mock).mockImplementation((cmd, cb) => {
+        // Simulate ps output
         cb(null, '1234 language_server_antigravity --csrf_token=xyz --extension_server_port=9999');
     });
     const finder = new LSPFinder();
@@ -168,9 +102,9 @@ Expected: FAIL
 
 **Step 3: Implementation**
 - Implement `LSPFinder`.
-- `findProcess()`: Execute `ps` or similar to find `language_server.*antigravity`.
-- Regex parse output for `--csrf_token` and `--extension_server_port`.
-- If port missing, implement `lsof` logic (Task 4b, keep simple for now).
+- `findProcess()`: Execute `ps aux` (Linux/Mac) or `wmic` (Windows - optionally, stick to Unix for now as per env).
+- Regex search for `language_server.*antigravity`.
+- Extract `--csrf_token` and `--extension_server_port`.
 
 **Step 4: Run test**
 Run: `npm test`
@@ -182,7 +116,7 @@ git add src/quota/LSPFinder.ts tests/quota/LSPFinder.test.ts
 git commit -m "feat: implement lsp process discovery"
 ```
 
-### Task 5: Quota Polling & Telemetry
+### Task 4: Quota Polling & Telemetry
 
 **Files:**
 - Create: `src/quota/QuotaPoller.ts`
@@ -201,8 +135,8 @@ describe('QuotaPoller', () => {
         data: { clientModelConfigs: { quotaInfo: { remainingFraction: 0.8 } } }
     });
     const poller = new QuotaPoller();
-    const quota = await poller.checkQuota(1234, 'token');
-    expect(quota).toBe(0.8);
+    const quota = await poller.checkQuota(1234, 'token'); // port, csrfToken
+    expect(quota.remainingFraction).toBe(0.8);
   });
 });
 ```
@@ -213,8 +147,11 @@ Expected: FAIL
 
 **Step 3: Implementation**
 - Implement `QuotaPoller`.
-- `checkQuota(port, csrfToken)`: POST to `127.0.0.1:<port>/.../GetUserStatus`.
-- Parse JSON response.
+- `checkQuota(port, csrfToken)`:
+  - POST to `http://127.0.0.1:<port>/exa.language_server_pb.LanguageServerService/GetUserStatus`.
+  - Headers: `X-Codeium-Csrf-Token: <csrfToken>`.
+  - Body: `{"ideName": "antigravity", "ideVersion": "unknown"}`.
+  - Return `remainingFraction` and `resetTime`.
 
 **Step 4: Run test**
 Run: `npm test`
@@ -226,7 +163,7 @@ git add src/quota/QuotaPoller.ts tests/quota/QuotaPoller.test.ts
 git commit -m "feat: implement quota polling"
 ```
 
-### Task 6: Account Rotation Logic
+### Task 5: Account Rotation Logic
 
 **Files:**
 - Create: `src/auth/AccountRotator.ts`
@@ -235,13 +172,30 @@ git commit -m "feat: implement quota polling"
 **Step 1: Write failing test**
 ```typescript
 import { AccountRotator } from '../../src/auth/AccountRotator';
+import { AccountMetadataV3 } from '../../src/auth/TokenStorageReader';
 
 describe('AccountRotator', () => {
-  it('should rotate account on failure', () => {
-    const rotator = new AccountRotator(['acc1', 'acc2']);
-    expect(rotator.getCurrentAccount()).toBe('acc1');
+  const accounts: AccountMetadataV3[] = [
+    { refreshToken: 't1', addedAt: 0, lastUsed: 0 },
+    { refreshToken: 't2', addedAt: 0, lastUsed: 0 }
+  ];
+
+  it('should rotate to next account when marked exhausted', () => {
+    const rotator = new AccountRotator(accounts, 0); // Start at index 0
+    expect(rotator.getCurrentAccount().refreshToken).toBe('t1');
+    
     rotator.markCurrentExhausted();
-    expect(rotator.getCurrentAccount()).toBe('acc2');
+    expect(rotator.getCurrentAccount().refreshToken).toBe('t2');
+  });
+
+  it('should skip cooled down accounts', () => {
+     const accountsWithCoolDown: AccountMetadataV3[] = [
+        { refreshToken: 't1', addedAt: 0, lastUsed: 0, coolingDownUntil: Date.now() + 10000 },
+        { refreshToken: 't2', addedAt: 0, lastUsed: 0 }
+     ];
+     const rotator = new AccountRotator(accountsWithCoolDown, 0);
+     // Should skip t1 because it has coolingDownUntil > now
+     expect(rotator.getCurrentAccount().refreshToken).toBe('t2');
   });
 });
 ```
@@ -252,10 +206,9 @@ Expected: FAIL
 
 **Step 3: Implementation**
 - Implement `AccountRotator`.
-- Maintain list of accounts.
-- Track cooldown/exhaustion state.
-- `getCurrentAccount()`: return first available.
-- `markCurrentExhausted()`: flag current and rotate.
+- Constructor takes `AccountMetadataV3[]` and `initialIndex`.
+- `getCurrentAccount()`: Iterates starting from `activeIndex`. Checks `coolingDownUntil`. Returns first valid.
+- `markCurrentExhausted(cooldownMs)`: Sets `coolingDownUntil` on current account, increments `activeIndex` (mod length).
 
 **Step 4: Run test**
 Run: `npm test`
@@ -264,27 +217,36 @@ Expected: PASS
 **Step 5: Commit**
 ```bash
 git add src/auth/AccountRotator.ts tests/auth/AccountRotator.test.ts
-git commit -m "feat: implement account rotation"
+git commit -m "feat: implement account rotation with cooldown support"
 ```
 
-### Task 7: Integration
+### Task 6: Integration (Main Entrypoint)
 
 **Files:**
 - Modify: `src/index.ts`
 - Test: `tests/integration.test.ts`
 
 **Step 1: Write failing test**
-- Integration test simulating full flow (mocked system calls).
+- Integration test simulating the `activate` flow.
+- Mock `TokenStorageReader` to return fake accounts.
+- Mock `LSPFinder` to return fake process info.
+- Verify `activate` returns an API/Object that allows retrieving the current valid token/quota.
 
 **Step 2: Run test**
-- Fail.
+Run: `npm test`
+Expected: FAIL
 
 **Step 3: Implementation**
-- Wire up `TokenStore`, `AccountRotator`, `LSPFinder`, `QuotaPoller` in `activate`.
-- Expose main API for OpenCode.
+- `activate()`:
+  - Instantiate `TokenStorageReader` -> load accounts.
+  - Instantiate `AccountRotator`.
+  - Instantiate `LSPFinder` -> find local process.
+  - Instantiate `QuotaPoller`.
+  - Expose `getQuota()` and `getToken()` methods.
 
 **Step 4: Run test**
-- Pass.
+Run: `npm test`
+Expected: PASS
 
 **Step 5: Commit**
 ```bash
