@@ -10,6 +10,11 @@ export class LSPFinder {
         crlfDelay: Infinity,
       });
 
+      ps.on('error', () => {
+        rl.close();
+        resolve(null);
+      });
+
       let found = false;
 
       rl.on('line', (line) => {
@@ -28,6 +33,7 @@ export class LSPFinder {
               port: parseInt(portMatch[1], 10),
             });
             ps.kill();
+            rl.close();
           }
         }
       });
