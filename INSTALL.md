@@ -14,7 +14,7 @@ Complete setup guide for the Antigravity ecosystem: authentication + quota manag
 
 ```
 Set up the complete Antigravity ecosystem for me by following:
-https://raw.githubusercontent.com/gooseware/antigravity-autopilot/main/INSTALL.md
+https://raw.githubusercontent.com/gooseware/opencode-antigravity-autopilot/main/INSTALL.md
 
 Ask me:
 1. Do I want oh-my-opencode for specialized agents?
@@ -135,7 +135,7 @@ npm install -g oh-my-opencode
 ### Step 3: Install Quota Plugin
 
 ```bash
-npm install -g antigravity-autopilot
+npm install -g opencode-antigravity-autopilot
 ```
 
 **Update OpenCode config** (`~/.config/opencode/opencode.json`):
@@ -145,7 +145,7 @@ npm install -g antigravity-autopilot
   "plugin": [
     "oh-my-opencode",
     "opencode-antigravity-auth@beta",
-    "antigravity-autopilot"
+    "opencode-antigravity-autopilot"
   ]
 }
 ```
@@ -167,7 +167,7 @@ opencode run "Hello from Antigravity" --model=google/antigravity-gemini-3-flash
 
 ```bash
 node -e "
-const { QuotaManager } = require('antigravity-autopilot');
+const { QuotaManager } = require('opencode-antigravity-autopilot');
 const manager = new QuotaManager();
 manager.initialize().then(async () => {
   const quota = await manager.getQuota();
@@ -235,7 +235,7 @@ Create `~/.config/opencode/quota.json`:
 - Check: `ps aux | grep language_server_antigravity`
 
 **"Plugin not found"**
-- Install: `npm install -g opencode-antigravity-auth@beta antigravity-autopilot`
+- Install: `npm install -g opencode-antigravity-auth@beta opencode-antigravity-autopilot`
 - Verify: `npm list -g | grep antigravity`
 
 **oh-my-opencode agents not working**
@@ -252,7 +252,7 @@ Create `~/.config/opencode/quota.json`:
   "plugin": [
     "oh-my-opencode",
     "opencode-antigravity-auth@beta",
-    "antigravity-autopilot"
+    "opencode-antigravity-autopilot"
   ],
   "provider": {
     "google": {
@@ -327,5 +327,5 @@ Create `~/.config/opencode/quota.json`:
 ## Support
 
 - Auth issues: https://github.com/NoeFabris/opencode-antigravity-auth/issues
-- Quota issues: https://github.com/gooseware/antigravity-autopilot/issues
+- Quota issues: https://github.com/gooseware/opencode-antigravity-autopilot/issues
 - oh-my-opencode: https://github.com/code-yeongyu/oh-my-opencode/issues

@@ -1,6 +1,6 @@
-# Antigravity Autopilot
+# OpenCode Antigravity Autopilot
 
-[![npm version](https://img.shields.io/npm/v/antigravity-autopilot.svg)](https://www.npmjs.com/package/antigravity-autopilot)
+[![npm version](https://img.shields.io/npm/v/opencode-antigravity-autopilot.svg)](https://www.npmjs.com/package/opencode-antigravity-autopilot)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 Intelligent quota management and model rotation for [opencode-antigravity-auth](https://github.com/NoeFabris/opencode-antigravity-auth). Automatically switches models when quota runs low, tracks usage across accounts, and works with both **OpenCode** and **oh-my-opencode**.
@@ -14,8 +14,8 @@ Intelligent quota management and model rotation for [opencode-antigravity-auth](
 **Let an LLM set it up:**
 
 ```
-Set up antigravity-autopilot for me. Follow:
-https://raw.githubusercontent.com/gooseware/antigravity-autopilot/main/INSTALL.md
+Set up opencode-antigravity-autopilot for me. Follow:
+https://raw.githubusercontent.com/gooseware/opencode-antigravity-autopilot/main/INSTALL.md
 
 Ask me:
 1. Am I using oh-my-opencode or vanilla OpenCode?
@@ -35,7 +35,7 @@ Then configure everything for me.
 ### Installation
 
 ```bash
-npm install antigravity-autopilot
+npm install opencode-antigravity-autopilot
 ```
 
 ## Configuration
@@ -48,7 +48,7 @@ Add to `~/.config/opencode/opencode.json`:
 {
   "plugin": [
     "opencode-antigravity-auth@beta",
-    "antigravity-autopilot"
+    "opencode-antigravity-autopilot"
   ]
 }
 ```
@@ -75,7 +75,7 @@ Add to `~/.config/opencode/oh-my-opencode.json`:
 ### Basic Usage
 
 ```typescript
-import { QuotaManager } from 'antigravity-autopilot';
+import { QuotaManager } from 'opencode-antigravity-autopilot';
 
 const manager = new QuotaManager({
   quotaThreshold: 0.2,
@@ -97,7 +97,7 @@ console.log(`Remaining quota: ${quota?.remainingFraction * 100}%`);
 ### oh-my-opencode Integration
 
 ```typescript
-import { createOhMyOpenCodeIntegration, QuotaManager } from 'antigravity-autopilot';
+import { createOhMyOpenCodeIntegration, QuotaManager } from 'opencode-antigravity-autopilot';
 
 const manager = new QuotaManager();
 await manager.initialize();
@@ -202,4 +202,4 @@ MIT
 
 ## Contributing
 
-Issues and PRs welcome at [github.com/gooseware/antigravity-autopilot](https://github.com/gooseware/antigravity-autopilot)
+Issues and PRs welcome at [github.com/gooseware/opencode-antigravity-autopilot](https://github.com/gooseware/opencode-antigravity-autopilot)

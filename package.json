@@ -1,5 +1,5 @@
 {
-  "name": "antigravity-autopilot",
+  "name": "opencode-antigravity-autopilot",
   "version": "1.0.0",
   "description": "Intelligent model rotation and quota orchestration for opencode-antigravity-auth",
   "main": "./dist/index.js",
@@ -9,11 +9,11 @@
   "author": "gooseware",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/gooseware/antigravity-autopilot.git"
+    "url": "git+https://github.com/gooseware/opencode-antigravity-autopilot.git"
   },
-  "homepage": "https://github.com/gooseware/antigravity-autopilot#readme",
+  "homepage": "https://github.com/gooseware/opencode-antigravity-autopilot#readme",
   "bugs": {
-    "url": "https://github.com/gooseware/antigravity-autopilot/issues"
+    "url": "https://github.com/gooseware/opencode-antigravity-autopilot/issues"
   },
   "keywords": [
     "opencode",

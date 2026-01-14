@@ -46,7 +46,7 @@ QuotaPoller        // Poll quota via LSP endpoint
 
 ### GitHub
 ```bash
-git remote add origin git@github.com:gooseware/antigravity-autopilot.git
+git remote add origin git@github.com:gooseware/opencode-antigravity-autopilot.git
 git add .
 git commit -m "feat: initial release"
 git push -u origin main
@@ -118,7 +118,7 @@ npm publish
 
 ### Basic
 ```typescript
-import { QuotaManager } from 'antigravity-autopilot';
+import { QuotaManager } from 'opencode-antigravity-autopilot';
 const manager = new QuotaManager();
 await manager.initialize();
 const bestModel = manager.selectBestModel();
@@ -126,7 +126,7 @@ const bestModel = manager.selectBestModel();
 
 ### oh-my-opencode
 ```typescript
-import { createOhMyOpenCodeIntegration } from 'antigravity-autopilot';
+import { createOhMyOpenCodeIntegration } from 'opencode-antigravity-autopilot';
 const integration = createOhMyOpenCodeIntegration(manager);
 const model = await integration.getModelForAgent('oracle');
 ```
