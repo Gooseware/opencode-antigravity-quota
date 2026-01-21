@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.1] - 2026-01-22
+
+### Fixed
+- **Accurate quota reset time tracking** - Uses actual API reset times instead of hardcoded 30-minute cooldowns
+  - `QuotaManager.rotateAccount()` accepts optional `resetTimeISO` parameter
+  - `HardLimitDetector` passes API reset time to rotator
+  - `quota_rotate_account` tool displays actual reset timestamp with countdown
+  - Account cooldowns now match Google's actual quota reset schedule
+
 ## [2.0.0] - 2026-01-22
 
 ### 🎉 Major Release - Plugin-Only Implementation
@@ -48,11 +57,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Hard limit detection now works reliably with API data
 - Model switching triggers correctly on quota exhaustion
 - Account rotation properly marks exhausted accounts
-- **Accurate quota reset time tracking** - Uses actual API reset times instead of hardcoded 30-minute cooldowns
-  - `AccountRotator.markCurrentExhausted()` accepts `resetTimeISO` parameter
-  - `HardLimitDetector` passes API reset time to rotator
-  - `QuotaManager.rotateAccount()` supports reset time propagation
-  - Account cooldowns now match Google's actual quota reset schedule
 
 ## [1.0.6] - 2026-01-14
 
@@ -63,5 +67,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Model rotation logic
 - oh-my-opencode integration
 
+[2.0.1]: https://github.com/gooseware/opencode-antigravity-autopilot/compare/v2.0.0...v2.0.1
 [2.0.0]: https://github.com/gooseware/opencode-antigravity-autopilot/compare/v1.0.6...v2.0.0
 [1.0.6]: https://github.com/gooseware/opencode-antigravity-autopilot/releases/tag/v1.0.6
