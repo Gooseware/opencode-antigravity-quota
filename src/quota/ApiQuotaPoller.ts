@@ -53,10 +53,9 @@ const ANTIGRAVITY_CLIENT_SECRET = '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';
 const GOOGLE_TOKEN_URL = 'https://oauth2.googleapis.com/token';
 const CLOUDCODE_BASE_URL = 'https://cloudcode-pa.googleapis.com';
 const CLOUDCODE_METADATA = {
-  clientName: 'code-oss',
-  versionString: '1.95.2',
-  extensionVersion: '1.11.13',
-  ideName: 'vscode',
+  ideType: 'ANTIGRAVITY',
+  platform: 'PLATFORM_UNSPECIFIED',
+  pluginType: 'GEMINI',
 };
 
 export class AuthenticationError extends Error {
