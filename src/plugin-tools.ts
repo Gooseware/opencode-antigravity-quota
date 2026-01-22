@@ -1,16 +1,20 @@
 import { QuotaManager } from './manager';
 import { HardLimitDetector } from './rotation/HardLimitDetector';
 import type { PluginConfig } from './types';
+import { getLogger } from './utils/logger';
 
 export function createQuotaTools(config?: PluginConfig) {
   const manager = new QuotaManager(config);
   const detector = new HardLimitDetector(config);
+  const logger = getLogger();
 
   return {
     quota_status: {
       description: 'Check current quota status for Antigravity models. Use detailed=true for all models.',
       args: {},
       async execute(args: { detailed?: boolean } = {}, ctx?: any) {
+        logger.info('PluginTools', 'quota_status invoked', { detailed: args.detailed });
+
         await manager.initialize();
 
         const currentQuota = await manager.getQuotaViaApi();
@@ -18,6 +22,7 @@ export function createQuotaTools(config?: PluginConfig) {
         const activeIndex = manager['tokenReader'].getActiveIndex();
 
         if (!currentQuota) {
+          logger.error('PluginTools', 'quota_status: could not fetch quota');
           return 'Could not fetch quota information. Ensure opencode-antigravity-auth is configured.';
         }
 
@@ -84,7 +89,10 @@ export function createQuotaTools(config?: PluginConfig) {
       description: 'Check if a specific model has enough quota. Provide model name as argument.',
       args: {},
       async execute(args: { model: string }, ctx?: any) {
+        logger.info('PluginTools', 'quota_check_model invoked', { model: args.model });
+
         if (!args.model) {
+          logger.error('PluginTools', 'quota_check_model: missing model argument');
           return 'Error: model argument is required. Example: quota_check_model({model: "gemini-3-pro"})';
         }
 
@@ -120,6 +128,8 @@ export function createQuotaTools(config?: PluginConfig) {
       description: 'Manually rotate to the next available account when current is exhausted. Optionally provide resetTimeISO for accurate cooldown.',
       args: {},
       async execute(args?: { resetTimeISO?: string }, ctx?: any) {
+        logger.info('PluginTools', 'quota_rotate_account invoked', { resetTimeISO: args?.resetTimeISO });
+
         await manager.rotateAccount(args?.resetTimeISO);
 
         if (args?.resetTimeISO) {

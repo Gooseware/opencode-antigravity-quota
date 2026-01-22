@@ -5,6 +5,31 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.1] - 2026-01-23
+
+### Added
+- **Comprehensive Logging System** - File-based logging to `/tmp` with daily rotation
+  - Format: `[timestamp] [level] [component] message | data`
+  - Outputs to both file and console for visibility
+  - Keeps last 7 days of logs automatically
+  - Detailed logging across all components (HardLimitDetector, QuotaManager, ModelSelector, QuotaTracker, PluginTools)
+- **LOGGING.md Documentation** - Complete guide for monitoring and analyzing logs
+
+### Changed
+- **Threshold Configuration** - Default quota threshold changed from 0.2 (20%) to 0.02 (2%)
+  - Model switching now occurs at 98% usage / 2% remaining quota
+  - More aggressive switching to prevent quota exhaustion
+  - Applied consistently across HardLimitDetector, QuotaManager, and QuotaTracker
+
+### Improved
+- **Decision Point Tracking** - All critical decision points now logged:
+  - Quota checks with percentages
+  - Threshold comparisons and evaluations
+  - Model switch events with reasoning
+  - Account rotations with details
+  - API fetch attempts and results
+  - Authentication failures and retries
+
 ## [2.1.0] - 2026-01-22
 
 ### Added
@@ -81,6 +106,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Model rotation logic
 - oh-my-opencode integration
 
+[2.1.1]: https://github.com/gooseware/opencode-antigravity-autopilot/compare/v2.1.0...v2.1.1
+[2.1.0]: https://github.com/gooseware/opencode-antigravity-autopilot/compare/v2.0.1...v2.1.0
 [2.0.1]: https://github.com/gooseware/opencode-antigravity-autopilot/compare/v2.0.0...v2.0.1
 [2.0.0]: https://github.com/gooseware/opencode-antigravity-autopilot/compare/v1.0.6...v2.0.0
 [1.0.6]: https://github.com/gooseware/opencode-antigravity-autopilot/releases/tag/v1.0.6

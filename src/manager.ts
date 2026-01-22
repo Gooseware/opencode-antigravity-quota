@@ -7,6 +7,7 @@ import { QuotaTracker } from './rotation/QuotaTracker';
 import { ModelSelector } from './rotation/ModelSelector';
 import { PluginConfig, ModelRotationStrategy } from './types';
 import { writeQuotaToCache } from './quota/QuotaCacheUpdater';
+import { getLogger } from './utils/logger';
 
 export class QuotaManager {
   private tokenReader!: TokenStorageReader;
@@ -18,6 +19,7 @@ export class QuotaManager {
   private modelSelector!: ModelSelector | null;
   private lspProcess!: { pid: number; csrfToken: string; port: number } | null;
   private lastSelectedModel!: string | null;
+  private logger = getLogger();
 
   constructor(config?: PluginConfig) {
     if (!(this instanceof QuotaManager)) {
@@ -35,13 +37,20 @@ export class QuotaManager {
     this.lspFinder = new LSPFinder();
     this.poller = new QuotaPoller();
     this.apiPoller = new ApiQuotaPoller();
-    this.quotaTracker = new QuotaTracker(config?.quotaThreshold || 0.2);
+    this.quotaTracker = new QuotaTracker(config?.quotaThreshold || 0.02);
+
+    this.logger.info('QuotaManager', 'Initialized', {
+      quotaThreshold: config?.quotaThreshold || 0.02,
+      accountsCount: accounts.length,
+      activeIndex,
+      preferredModelsCount: config?.preferredModels?.length || 0,
+    });
 
     if (config?.preferredModels) {
       const strategy: ModelRotationStrategy = {
         preferredModels: config.preferredModels,
         fallbackModels: [],
-        quotaThreshold: config.quotaThreshold || 0.2,
+        quotaThreshold: config.quotaThreshold || 0.02,
       };
       this.modelSelector = new ModelSelector(this.quotaTracker, strategy);
     }
@@ -80,40 +89,47 @@ export class QuotaManager {
   async getQuotaViaApi(modelName?: string, retries = 3): Promise<QuotaInfo | null> {
     const account = this.rotator.getCurrentAccount();
     if (!account) {
-      // console.warn('getQuotaViaApi: No account available');
+      this.logger.warn('QuotaManager', 'No account available for quota fetch');
       return null;
     }
 
-    // console.log(`getQuotaViaApi: Called (acc=${account.email}, retries=${retries})`);
+    this.logger.debug('QuotaManager', 'Fetching quota via API', {
+      modelName: modelName || this.lastSelectedModel || 'all',
+      accountEmail: account.email,
+      retriesLeft: retries,
+    });
 
     try {
       let result: QuotaInfo | null = null;
-      // Default to the last selected model if available and no specific model requested
       const targetModel = modelName || this.lastSelectedModel;
 
       if (targetModel) {
+        this.logger.debug('QuotaManager', 'Fetching quota for specific model', { model: targetModel });
         result = await this.apiPoller.checkQuotaForModel(account, targetModel);
       } else {
-        // console.log('getQuotaViaApi: Fetching all quotas');
+        this.logger.debug('QuotaManager', 'Fetching all quotas');
         const quotas = await this.apiPoller.getAllQuotas(account);
         if (quotas.size === 0) {
-          // console.log('getQuotaViaApi: No quotas returned');
+          this.logger.warn('QuotaManager', 'No quotas returned from API');
           return null;
         }
         result = quotas.values().next().value || null;
       }
 
       if (result) {
-        // console.log('getQuotaViaApi: Success', { model: result.model });
-        // Event-driven update: success here writes to cache immediately
+        this.logger.info('QuotaManager', 'Quota fetched successfully', {
+          model: result.model,
+          remainingFraction: result.remainingFraction,
+          quotaPercentage: `${(result.remainingFraction * 100).toFixed(1)}%`,
+        });
         await writeQuotaToCache(result);
       }
       return result;
 
     } catch (error) {
-      // console.warn('getQuotaViaApi: Error', error);
+      this.logger.error('QuotaManager', 'Error fetching quota', { error, retriesLeft: retries });
       if (error instanceof AuthenticationError && retries > 0) {
-        // console.log('Authentication failed, rotating account and retrying...');
+        this.logger.info('QuotaManager', 'Authentication failed, rotating account', { retriesLeft: retries - 1 });
         await this.rotateAccount();
         return this.getQuotaViaApi(modelName, retries - 1);
       }
@@ -123,19 +139,32 @@ export class QuotaManager {
 
   async getAllQuotasViaApi(retries = 3): Promise<Map<string, QuotaInfo>> {
     const account = this.rotator.getCurrentAccount();
-    if (!account) return new Map();
+    if (!account) {
+      this.logger.warn('QuotaManager', 'No account available for getAllQuotas');
+      return new Map();
+    }
+
+    this.logger.debug('QuotaManager', 'Fetching all quotas via API', {
+      accountEmail: account.email,
+      retriesLeft: retries,
+    });
 
     try {
       const quotas = await this.apiPoller.getAllQuotas(account);
-      // Attempt to cache the first one if available to keep UI fresh
+      
+      this.logger.info('QuotaManager', 'All quotas fetched successfully', {
+        modelsCount: quotas.size,
+      });
+
       const first = quotas.values().next().value;
       if (first) {
         await writeQuotaToCache(first);
       }
       return quotas;
     } catch (error) {
+      this.logger.error('QuotaManager', 'Error fetching all quotas', { error, retriesLeft: retries });
       if (error instanceof AuthenticationError && retries > 0) {
-        // console.log('Authentication failed, rotating account and retrying...');
+        this.logger.info('QuotaManager', 'Authentication failed, rotating account', { retriesLeft: retries - 1 });
         await this.rotateAccount();
         return this.getAllQuotasViaApi(retries - 1);
       }
@@ -144,14 +173,23 @@ export class QuotaManager {
   }
 
   async rotateAccount(resetTimeISO?: string): Promise<void> {
+    this.logger.info('QuotaManager', 'Rotating account', { resetTimeISO });
     this.rotator.markCurrentExhausted(undefined, resetTimeISO);
     this.quotaTracker.clearAll();
+    
+    const newAccount = this.rotator.getCurrentAccount();
+    this.logger.info('QuotaManager', 'Account rotated', {
+      newAccountEmail: newAccount?.email,
+    });
   }
 
   selectBestModel(): string | null {
     const model = this.modelSelector?.selectModel() || null;
     if (model) {
+      this.logger.info('QuotaManager', 'Best model selected', { model });
       this.lastSelectedModel = model;
+    } else {
+      this.logger.warn('QuotaManager', 'No suitable model found');
     }
     return model;
   }
@@ -165,6 +203,11 @@ export class QuotaManager {
   }
 
   setModelRotationStrategy(strategy: ModelRotationStrategy): void {
+    this.logger.info('QuotaManager', 'Setting model rotation strategy', {
+      preferredModels: strategy.preferredModels,
+      fallbackModels: strategy.fallbackModels,
+      quotaThreshold: strategy.quotaThreshold,
+    });
     this.modelSelector = new ModelSelector(this.quotaTracker, strategy);
   }
 }

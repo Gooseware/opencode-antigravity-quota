@@ -1,9 +1,11 @@
 import { QuotaTracker } from './QuotaTracker';
 import { ModelRotationStrategy } from '../types';
+import { getLogger } from '../utils/logger';
 
 export class ModelSelector {
   private quotaTracker!: QuotaTracker;
   private strategy!: ModelRotationStrategy;
+  private logger = getLogger();
 
   constructor(quotaTracker: QuotaTracker, strategy: ModelRotationStrategy) {
     if (!(this instanceof ModelSelector)) {
@@ -12,20 +14,40 @@ export class ModelSelector {
     }
     this.quotaTracker = quotaTracker;
     this.strategy = strategy;
+
+    this.logger.info('ModelSelector', 'Initialized', {
+      preferredModelsCount: strategy.preferredModels.length,
+      fallbackModelsCount: strategy.fallbackModels.length,
+      quotaThreshold: strategy.quotaThreshold,
+    });
   }
 
   selectModel(): string | null {
+    this.logger.debug('ModelSelector', 'Selecting model', {
+      preferredModels: this.strategy.preferredModels,
+      fallbackModels: this.strategy.fallbackModels,
+    });
+
     const preferredModel = this.quotaTracker.getBestAvailableModel(
       this.strategy.preferredModels
     );
 
     if (preferredModel) {
+      this.logger.info('ModelSelector', 'Selected preferred model', { model: preferredModel });
       return preferredModel;
     }
+
+    this.logger.warn('ModelSelector', 'No preferred model available, trying fallbacks');
 
     const fallbackModel = this.quotaTracker.getBestAvailableModel(
       this.strategy.fallbackModels
     );
+
+    if (fallbackModel) {
+      this.logger.info('ModelSelector', 'Selected fallback model', { model: fallbackModel });
+    } else {
+      this.logger.error('ModelSelector', 'No suitable model found (all exhausted or below threshold)');
+    }
 
     return fallbackModel;
   }
