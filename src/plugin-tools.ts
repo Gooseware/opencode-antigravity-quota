@@ -25,39 +25,55 @@ export function createQuotaTools(config?: PluginConfig) {
         let statusIcon = '';
         let statusText = '';
 
-        if (percentage >= 50) {
-          statusIcon = '✓';
-          statusText = 'healthy';
-        } else if (percentage >= 20) {
+        // Standardized thresholds: < 20% Critical, < 50% Warning, >= 50% Healthy
+        if (percentage <= 0) {
+          statusIcon = '❌';
+          statusText = 'exhausted';
+        } else if (percentage < 20) {
+          statusIcon = '❌';
+          statusText = 'critical';
+        } else if (percentage < 50) {
           statusIcon = '⚠';
           statusText = 'running low';
         } else {
-          statusIcon = '❌';
-          statusText = 'critical';
+          statusIcon = '✓';
+          statusText = 'healthy';
         }
 
-        let output = `# Quota Status
-
-${statusIcon} **Current Model:** ${currentQuota.model || 'unknown'}
-**Status:** Quota ${statusText} at ${percentage}%
-
-**Accounts:** ${activeIndex + 1} of ${accounts.length} active
-`;
+        let output = `# Quota Status\n\n`;
+        output += `${statusIcon} **Current Model:** ${currentQuota.model || 'Unknown'}\n`;
+        output += `**Status:** ${statusText.toUpperCase()} (${percentage}% remaining)\n`;
+        output += `**Account:** ${activeIndex + 1} of ${accounts.length} active\n`;
 
         if (args.detailed) {
           const allQuotas = await manager.getAllQuotasViaApi();
-          
+
           if (allQuotas.size > 0) {
-            output += `\n## All Models\n\n`;
-            
-            for (const [modelName, quota] of allQuotas.entries()) {
+            output += `\n## Available Models\n\n`;
+
+            // Filter and sort models similar to opencode-antigravity-quota
+            const sortedModels = Array.from(allQuotas.entries())
+              .filter(([name]) => {
+                const lower = name.toLowerCase();
+                return !lower.startsWith('chat_') &&
+                  !lower.startsWith('rev19') &&
+                  !lower.includes('gemini 2.5') &&
+                  !lower.includes('gemini 3 pro image');
+              })
+              .sort((a, b) => a[0].localeCompare(b[0]));
+
+            for (const [modelName, quota] of sortedModels) {
               const pct = Math.round(quota.remainingFraction * 100);
-              const icon = quota.remainingFraction <= 0 ? '❌' : pct >= 50 ? '✓' : '⚠';
+              let icon = '✓';
+              if (pct <= 0) icon = '❌';
+              else if (pct < 20) icon = '❌';
+              else if (pct < 50) icon = '⚠';
+
               output += `- ${icon} **${modelName}**: ${pct}%\n`;
             }
           }
         } else {
-          output += `\n*Use quota_status with detailed=true to see all models*\n`;
+          output += `\n*Tip: Run with { detailed: true } to see all models*\n`;
         }
 
         return output;
@@ -105,14 +121,14 @@ ${statusIcon} **Current Model:** ${currentQuota.model || 'unknown'}
       args: {},
       async execute(args?: { resetTimeISO?: string }, ctx?: any) {
         await manager.rotateAccount(args?.resetTimeISO);
-        
+
         if (args?.resetTimeISO) {
           const resetDate = new Date(args.resetTimeISO);
           const now = new Date();
           const minutesUntilReset = Math.round((resetDate.getTime() - now.getTime()) / (60 * 1000));
           return `✓ Rotated to next account. Previous account will be available again at ${resetDate.toISOString()} (~${minutesUntilReset} minutes).`;
         }
-        
+
         return `✓ Rotated to next account. Previous account marked as exhausted for 30 minutes.`;
       },
     },

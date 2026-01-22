@@ -1,5 +1,6 @@
 import type { AccountMetadataV3 } from '../types';
 
+
 // Import types and utilities from opencode-antigravity-quota
 interface CloudCodeQuotaInfo {
   remainingFraction?: number;
@@ -47,16 +48,25 @@ export interface ModelQuotaInfo {
   resetTime?: string;
 }
 
-const ANTIGRAVITY_CLIENT_ID = '764086051850-6qr4p6gpi6hn506pt8ejuq83di341hur.apps.googleusercontent.com';
-const ANTIGRAVITY_CLIENT_SECRET = 'd-FL95Q19q7MQmFpd7hHD0Ty';
+const ANTIGRAVITY_CLIENT_ID = '1071006060591-tmhssin2h21lcre235vtolojh4g403ep.apps.googleusercontent.com';
+const ANTIGRAVITY_CLIENT_SECRET = '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';
 const GOOGLE_TOKEN_URL = 'https://oauth2.googleapis.com/token';
-const CLOUDCODE_BASE_URL = 'https://cloudcode.googleapis.com';
+const CLOUDCODE_BASE_URL = 'https://cloudcode-pa.googleapis.com';
 const CLOUDCODE_METADATA = {
   clientName: 'code-oss',
   versionString: '1.95.2',
   extensionVersion: '1.11.13',
   ideName: 'vscode',
 };
+
+export class AuthenticationError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'AuthenticationError';
+  }
+}
+
+
 
 export class ApiQuotaPoller {
   constructor() {
@@ -67,6 +77,7 @@ export class ApiQuotaPoller {
   }
 
   private async refreshAccessToken(refreshToken: string): Promise<string> {
+    // console.log('refreshAccessToken: Starting');
     const params = new URLSearchParams({
       client_id: ANTIGRAVITY_CLIENT_ID,
       client_secret: ANTIGRAVITY_CLIENT_SECRET,
@@ -74,33 +85,62 @@ export class ApiQuotaPoller {
       grant_type: 'refresh_token',
     });
 
-    const response = await fetch(GOOGLE_TOKEN_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: params.toString(),
-    });
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10000);
 
-    if (!response.ok) {
-      throw new Error(`Token refresh failed (${response.status})`);
+    try {
+      const response = await fetch(GOOGLE_TOKEN_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: params.toString(),
+        signal: controller.signal,
+      });
+
+      if (!response.ok) {
+        console.warn(`refreshAccessToken: Failed ${response.status}`);
+        if (response.status === 401 || response.status === 403) {
+          throw new AuthenticationError(`Token refresh failed (${response.status})`);
+        }
+        throw new Error(`Token refresh failed (${response.status})`);
+      }
+
+      const data = (await response.json()) as TokenResponse;
+      // console.log('refreshAccessToken: Success');
+      return data.access_token;
+    } catch (e: any) {
+      console.warn('refreshAccessToken: Error', e.message);
+      throw e;
+    } finally {
+      clearTimeout(timeout);
     }
-
-    const data = (await response.json()) as TokenResponse;
-    return data.access_token;
   }
 
   private async loadCodeAssist(accessToken: string): Promise<LoadCodeAssistResponse> {
-    const response = await fetch(`${CLOUDCODE_BASE_URL}/v1internal:loadCodeAssist`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        'Content-Type': 'application/json',
-        'User-Agent': 'antigravity',
-      },
-      body: JSON.stringify({ metadata: CLOUDCODE_METADATA }),
-    });
+    // console.log('loadCodeAssist: Called');
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10000);
 
-    if (!response.ok) throw new Error(`loadCodeAssist failed (${response.status})`);
-    return (await response.json()) as LoadCodeAssistResponse;
+    try {
+      const response = await fetch(`${CLOUDCODE_BASE_URL}/v1internal:loadCodeAssist`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+          'User-Agent': 'antigravity',
+        },
+        body: JSON.stringify({ metadata: CLOUDCODE_METADATA }),
+        signal: controller.signal,
+      });
+
+      if (!response.ok) {
+        console.warn(`loadCodeAssist: Failed ${response.status}`);
+        throw new Error(`loadCodeAssist failed (${response.status})`);
+      }
+      // console.log('loadCodeAssist: Success');
+      return (await response.json()) as LoadCodeAssistResponse;
+    } finally {
+      clearTimeout(timeout);
+    }
   }
 
   private extractProjectId(cloudaicompanionProject: unknown): string | undefined {
@@ -116,27 +156,42 @@ export class ApiQuotaPoller {
     accessToken: string,
     projectId?: string
   ): Promise<CloudCodeQuotaResponse> {
+    // console.log(`fetchAvailableModels: Called (project=${projectId})`);
     const payload = projectId ? { project: projectId } : {};
-    const response = await fetch(`${CLOUDCODE_BASE_URL}/v1internal:fetchAvailableModels`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        'Content-Type': 'application/json',
-        'User-Agent': 'antigravity',
-      },
-      body: JSON.stringify(payload),
-    });
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10000);
 
-    if (!response.ok) throw new Error(`fetchModels failed (${response.status})`);
-    return (await response.json()) as CloudCodeQuotaResponse;
+    try {
+      const response = await fetch(`${CLOUDCODE_BASE_URL}/v1internal:fetchAvailableModels`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+          'User-Agent': 'antigravity',
+        },
+        body: JSON.stringify(payload),
+        signal: controller.signal,
+      });
+
+      if (!response.ok) {
+        console.warn(`fetchAvailableModels: Failed ${response.status}`);
+        throw new Error(`fetchModels failed (${response.status})`);
+      }
+      // console.log('fetchAvailableModels: Success');
+      return (await response.json()) as CloudCodeQuotaResponse;
+    } finally {
+      clearTimeout(timeout);
+    }
   }
 
   async checkQuota(account: AccountMetadataV3): Promise<ModelQuotaInfo[]> {
+    // console.log(`checkQuota: Called for ${account.email}`);
     try {
       const accessToken = await this.refreshAccessToken(account.refreshToken);
       let projectId = account.projectId || account.managedProjectId;
 
       if (!projectId) {
+        // console.log('checkQuota: Loading Code Assist to get project ID');
         const codeAssist = await this.loadCodeAssist(accessToken);
         projectId = this.extractProjectId(codeAssist.cloudaicompanionProject);
       }
@@ -152,7 +207,7 @@ export class ApiQuotaPoller {
 
         const label = info.displayName || modelKey;
         const lowerLabel = label.toLowerCase();
-        
+
         // Filter out unwanted models
         if (
           lowerLabel.startsWith('chat_') ||
@@ -176,21 +231,24 @@ export class ApiQuotaPoller {
 
       return models;
     } catch (error) {
-      console.error('Failed to check quota via API:', error);
+      if (error instanceof AuthenticationError) {
+        throw error;
+      }
+      console.warn('Failed to check quota via API:', error);
       return [];
     }
   }
 
   async checkQuotaForModel(account: AccountMetadataV3, modelName: string): Promise<QuotaInfo | null> {
     const models = await this.checkQuota(account);
-    
+
     // Try exact match first
     let model = models.find(m => m.model === modelName || m.displayName === modelName);
-    
+
     // Try partial match (e.g., "gemini-3-pro" matches "Gemini 3 Pro")
     if (!model) {
       const normalizedSearch = modelName.toLowerCase().replace(/[-_]/g, ' ');
-      model = models.find(m => 
+      model = models.find(m =>
         m.model.toLowerCase().includes(normalizedSearch) ||
         m.displayName.toLowerCase().includes(normalizedSearch)
       );
@@ -215,7 +273,7 @@ export class ApiQuotaPoller {
         resetTime: model.resetTime,
         model: model.model,
       });
-      
+
       // Also add by display name for easier lookup
       quotaMap.set(model.displayName, {
         remainingFraction: model.remainingFraction,
