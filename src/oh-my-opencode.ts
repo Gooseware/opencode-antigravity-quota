@@ -12,6 +12,7 @@ export function createOhMyOpenCodeIntegration(
   return {
     async getModelForAgent(agentName: string, preferredModel?: string): Promise<string> {
       const targetModel = preferredModel || config?.defaultModel;
+      const quotaThreshold = quotaManager.getQuotaTracker().getThreshold();
 
       if (!targetModel) {
         let selected = quotaManager.selectBestModel();
@@ -24,7 +25,7 @@ export function createOhMyOpenCodeIntegration(
 
       const quotaState = quotaManager.getQuotaTracker().getQuotaForModel(targetModel);
 
-      if (quotaState && quotaState.quotaFraction < 0.2) {
+      if (quotaState && quotaState.quotaFraction < quotaThreshold) {
         const fallback = quotaManager.selectBestModel();
         if (!fallback) {
           await quotaManager.rotateAccount();

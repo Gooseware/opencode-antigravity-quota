@@ -46,6 +46,10 @@ export class QuotaTracker {
     return this.quotaState.get(model) || null;
   }
 
+  getThreshold(): number {
+    return this.quotaThreshold;
+  }
+
   isModelAvailable(model: string): boolean {
     const state = this.quotaState.get(model);
     if (!state) return true;

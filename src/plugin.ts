@@ -1,6 +1,7 @@
 import { QuotaManager } from './manager';
 import { QuotaCacheUpdater } from './quota/QuotaCacheUpdater';
 import type { PluginConfig } from './types';
+import { translateModelName, formatModelQuotaForToast } from './utils/model-name-translator';
 import fs from 'fs';
 
 const LOG_FILE = '/tmp/autopilot.log';
@@ -85,13 +86,14 @@ export const plugin: Plugin = async (ctx) => {
 
         // Show notification with quota stats
         try {
-          const quota = await manager.getQuotaViaApi(); // Gets last used model or global
+          const quota = await manager.getQuotaViaApi();
           if (quota) {
             const percentage = Math.round(quota.remainingFraction * 100);
-            const statusIcon = percentage <= 10 ? '🔴' : percentage <= 25 ? '🟡' : '🟢';
             const threshold = (userConfig.quotaThreshold || 0.02) * 100;
+            const modelDisplayName = translateModelName(quota.model || 'Unknown');
+            const quotaDisplay = formatModelQuotaForToast(quota.model || 'Unknown', percentage);
 
-            let message = `${statusIcon} Quota: ${percentage}% (Cutoff: ${threshold}%)`;
+            let message = `${quotaDisplay} (Cutoff: ${threshold}%)`;
 
             if (quota.resetTime) {
               const resetDate = new Date(quota.resetTime);
@@ -107,9 +109,9 @@ export const plugin: Plugin = async (ctx) => {
 
             await ctx.client.tui.showToast({
               body: {
-                title: `Quota: ${quota.model || 'Unknown'}`,
+                title: modelDisplayName,
                 message,
-                variant: percentage <= 10 ? 'critical' : 'info'
+                variant: percentage <= threshold ? 'critical' : percentage <= threshold * 2 ? 'warning' : 'info'
               }
             });
           }

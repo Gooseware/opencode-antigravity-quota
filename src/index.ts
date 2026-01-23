@@ -20,3 +20,9 @@ export { QuotaTracker } from './rotation/QuotaTracker';
 export { ModelSelector } from './rotation/ModelSelector';
 export { HardLimitDetector } from './rotation/HardLimitDetector';
 export type { HardLimitCheckResult } from './rotation/HardLimitDetector';
+export {
+  translateModelName,
+  getShortModelName,
+  formatModelQuotaForToast,
+  formatModelSwitchMessage,
+} from './utils/model-name-translator';
