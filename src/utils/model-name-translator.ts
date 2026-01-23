@@ -20,18 +20,18 @@ const API_TO_DISPLAY_NAMES: Record<string, string> = {
   'MODEL_GEMINI_3_FLASH_HIGH': 'Gemini 3 Flash (High)',
   'MODEL_GEMINI_2_5_PRO': 'Gemini 2.5 Pro',
   'MODEL_GEMINI_2_5_FLASH': 'Gemini 2.5 Flash',
-  
+
   // Claude models
   'MODEL_CLAUDE_4_5_SONNET': 'Claude 4.5 Sonnet',
   'MODEL_CLAUDE_4_5_SONNET_THINKING': 'Claude 4.5 Sonnet (Thinking)',
   'MODEL_CLAUDE_4_5_OPUS': 'Claude 4.5 Opus',
   'MODEL_CLAUDE_4_5_OPUS_THINKING': 'Claude 4.5 Opus (Thinking)',
   'MODEL_CLAUDE_3_5_SONNET': 'Claude 3.5 Sonnet',
-  
+
   // GPT models
   'MODEL_OPENAI_GPT_OSS_120B_MEDIUM': 'GPT OSS 120B (Medium)',
   'MODEL_OPENAI_GPT_4O': 'GPT-4o',
-  
+
   // Placeholder models (for testing/development)
   'MODEL_PLACEHOLDER_M7': 'Placeholder M7',
   'MODEL_PLACEHOLDER_M8': 'Placeholder M8',
@@ -95,6 +95,9 @@ function extractTierSuffix(modelName: string): string | null {
  */
 export function translateModelName(modelName: string): string {
   if (!modelName) return 'Unknown Model';
+  if (typeof modelName !== 'string') {
+    return String(modelName);
+  }
 
   // Strip common prefixes
   let cleaned = modelName
