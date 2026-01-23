@@ -22,9 +22,10 @@ Zero OpenCode source modifications required - works as a pure plugin!
 
 Simply copy and paste this prompt to your OpenCode assistant:
 
-> Please install the `opencode-antigravity-autopilot` plugin from npm.
+> Please read the documentation at https://github.com/Gooseware/opencode-antigravity-autopilot#readme to understand the installation steps.
+> Install the `opencode-antigravity-autopilot` plugin from npm.
 > Then, configure `~/.config/opencode/opencode.json` to add `"opencode-antigravity-autopilot"` to the `plugin` list.
-> Finally, create a default quota config in `~/.config/opencode/quota.json` with auto-rotation enabled.
+> Finally, create a default quota config in `~/.config/opencode/quota.json` with auto-rotation enabled for models like `antigravity-gemini-3-pro-high` and `antigravity-claude-sonnet-4-5`.
 
 ### From NPM
 
@@ -57,7 +58,7 @@ Add to `~/.config/opencode/opencode.json`:
 ```json
 {
   "plugin": [
-    "opencode-antigravity-auth@beta",
+    "opencode-antigravity-auth",
     "opencode-antigravity-autopilot"
   ]
 }
@@ -71,9 +72,9 @@ Create `~/.config/opencode/quota.json` to configure thresholds and models:
 {
   "quotaThreshold": 0.05,
   "preferredModels": [
-    "gemini-2.0-pro-exp-02-05", // Try this first
-    "claude-3-7-sonnet",         // Then this
-    "gemini-2.0-flash-thinking-exp-01-21"  // Fallback
+    "antigravity-gemini-3-pro-high",      // Try this first
+    "antigravity-claude-sonnet-4-5",      // Then this
+    "antigravity-gemini-3-flash"          // Fallback
   ],
   "autoRotate": true
 }
@@ -90,7 +91,7 @@ Simply ask your assistant:
 ```
 "Check my quota status"
 "Show detailed quota for all models"
-"Can I use gemini-3-pro right now?"
+"Can I use antigravity-gemini-3-pro-high right now?"
 ```
 
 The LLM will call the appropriate tools and show results like:
@@ -98,7 +99,7 @@ The LLM will call the appropriate tools and show results like:
 ```
 # Quota Status
 
-✓ **Current Model:** gemini-3-pro
+✓ **Current Model:** antigravity-gemini-3-pro-high
 **Status:** Quota healthy at 67%
 
 **Accounts:** 1 of 3 active
@@ -120,7 +121,7 @@ quota_status({ detailed: true })
 Check if a specific model has enough quota
 
 ```typescript
-quota_check_model({ model: "gemini-3-pro" })
+quota_check_model({ model: "antigravity-gemini-3-pro-high" })
 ```
 
 #### `quota_rotate_account`
@@ -138,13 +139,13 @@ import { HardLimitDetector } from 'opencode-antigravity-autopilot';
 const detector = new HardLimitDetector({
   quotaThreshold: 0.2,  // Switch when below 20%
   preferredModels: [
-    'google/antigravity-gemini-3-pro',
+    'google/antigravity-gemini-3-pro-high',
     'google/antigravity-claude-sonnet-4-5'
   ]
 });
 
 // Before using a model
-const result = await detector.checkHardLimit('gemini-3-pro');
+const result = await detector.checkHardLimit('antigravity-gemini-3-pro-high');
 
 if (result.shouldRotate) {
   console.log(`Switching to: ${result.nextModel}`);
@@ -202,7 +203,7 @@ import { HardLimitDetector } from 'opencode-antigravity-autopilot';
 
 const detector = new HardLimitDetector({
   preferredModels: [
-    'google/antigravity-gemini-3-pro',      // Try first
+    'google/antigravity-gemini-3-pro-high', // Try first
     'google/antigravity-claude-sonnet-4-5', // Try second  
     'google/antigravity-gemini-3-flash'     // Fallback
   ]
