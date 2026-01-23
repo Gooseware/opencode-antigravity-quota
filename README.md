@@ -18,6 +18,14 @@ Zero OpenCode source modifications required - works as a pure plugin!
 
 ## 🚀 Quick Start
 
+### 🤖 Install with LLM
+
+Simply copy and paste this prompt to your OpenCode assistant:
+
+> Please install the `opencode-antigravity-autopilot` plugin from npm.
+> Then, configure `~/.config/opencode/opencode.json` to add `"opencode-antigravity-autopilot"` to the `plugin` list.
+> Finally, create a default quota config in `~/.config/opencode/quota.json` with auto-rotation enabled.
+
 ### From NPM
 
 ```bash
