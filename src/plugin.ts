@@ -96,10 +96,14 @@ export const plugin: Plugin = async (ctx) => {
           
           output.message.model.modelID = result.nextModel;
           
-          if (result.nextModel.includes('claude')) {
+          if (result.nextModel.toLowerCase().includes('claude')) {
             output.message.model.providerID = 'anthropic';
-          } else if (result.nextModel.includes('gemini')) {
+          } else if (result.nextModel.toLowerCase().includes('gemini')) {
             output.message.model.providerID = 'google';
+          } else if (result.nextModel.toLowerCase().includes('gpt')) {
+            output.message.model.providerID = 'openai';
+          } else if (result.nextModel.includes('/')) {
+            output.message.model.providerID = result.nextModel.split('/')[0];
           }
           
           await ctx.client.tui.showToast({

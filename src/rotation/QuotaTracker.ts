@@ -62,42 +62,31 @@ export class QuotaTracker {
   }
 
   getBestAvailableModel(candidates: string[]): string | null {
-    this.logger.debug('QuotaTracker', 'Finding best available model', {
+    this.logger.debug('QuotaTracker', 'Finding best available model (respecting preference order)', {
       candidatesCount: candidates.length,
       candidates,
     });
 
-    let bestModel: string | null = null;
-    let bestQuota = -1;
-
     for (const model of candidates) {
-      if (!this.isModelAvailable(model)) {
-        this.logger.debug('QuotaTracker', 'Model unavailable (below threshold)', { model });
-        continue;
+      if (this.isModelAvailable(model)) {
+        const state = this.quotaState.get(model);
+        const quotaPercentage = state ? `${(state.quotaFraction * 100).toFixed(1)}%` : 'unknown (assumed healthy)';
+        
+        this.logger.info('QuotaTracker', 'Selected model based on preference order', {
+          model,
+          quotaPercentage,
+        });
+        return model;
       }
-
-      const state = this.quotaState.get(model);
-      const quota = state?.quotaFraction ?? 1.0;
-
-      if (quota > bestQuota) {
-        bestQuota = quota;
-        bestModel = model;
-      }
+      
+      this.logger.debug('QuotaTracker', 'Model unavailable (below threshold), skipping', { model });
     }
 
-    if (bestModel) {
-      this.logger.info('QuotaTracker', 'Best model found', {
-        model: bestModel,
-        quotaFraction: bestQuota,
-        quotaPercentage: `${(bestQuota * 100).toFixed(1)}%`,
-      });
-    } else {
-      this.logger.warn('QuotaTracker', 'No available model found among candidates', {
-        candidatesCount: candidates.length,
-      });
-    }
+    this.logger.warn('QuotaTracker', 'No available model found among candidates', {
+      candidatesCount: candidates.length,
+    });
 
-    return bestModel;
+    return null;
   }
 
   getAllQuotaStates(): ModelQuotaState[] {
