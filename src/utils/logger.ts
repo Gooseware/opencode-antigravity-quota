@@ -32,7 +32,7 @@ export class AutopilotLogger {
     const filename = options?.filename || `autopilot-${this.getDateString()}.log`;
     this.logFilePath = path.join(logDir, filename);
     this.enabled = options?.enabled ?? true;
-    this.minLevel = options?.minLevel || 'info';
+    this.minLevel = options?.minLevel || 'debug';
 
     if (this.enabled) {
       this.ensureLogDirectory();

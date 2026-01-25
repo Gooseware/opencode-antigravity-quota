@@ -2,18 +2,33 @@ import { AccountMetadataV3, AccountStorageV3 } from './TokenStorageReader';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
+import { getLogger } from '../utils/logger';
 
 export class AccountRotator {
   private accounts!: AccountMetadataV3[];
   private activeIndex!: number;
+  private activeIndexByFamily?: { claude?: number; gemini?: number; antigravity?: number };
+  private logger = getLogger();
 
-  constructor(accounts: AccountMetadataV3[], initialIndex: number) {
+  constructor(
+    accounts: AccountMetadataV3[],
+    initialIndex: number,
+    activeIndexByFamily?: { claude?: number; gemini?: number; antigravity?: number }
+  ) {
     if (!(this instanceof AccountRotator)) {
       // @ts-ignore
-      return new AccountRotator(accounts, initialIndex);
+      return new AccountRotator(accounts, initialIndex, activeIndexByFamily);
     }
     this.accounts = [...accounts];
-    this.activeIndex = initialIndex;
+    this.activeIndexByFamily = activeIndexByFamily ? { ...activeIndexByFamily } : undefined;
+
+    if (this.activeIndexByFamily?.antigravity !== undefined) {
+      this.activeIndex = this.activeIndexByFamily.antigravity;
+    } else if (this.activeIndexByFamily?.gemini !== undefined) {
+      this.activeIndex = this.activeIndexByFamily.gemini;
+    } else {
+      this.activeIndex = initialIndex;
+    }
   }
 
   public getCurrentAccount(): AccountMetadataV3 | null {
@@ -87,7 +102,7 @@ export class AccountRotator {
       try {
         fs.mkdirSync(dir, { recursive: true });
       } catch (error) {
-        console.error('Failed to create config directory:', error);
+        this.logger.error('AccountRotator', 'Failed to create config directory', error);
         return;
       }
     }
@@ -95,13 +110,23 @@ export class AccountRotator {
     const storage: AccountStorageV3 = {
       version: 3,
       accounts: this.accounts,
-      activeIndex: this.activeIndex
+      activeIndex: this.activeIndex,
+      activeIndexByFamily: this.activeIndexByFamily
+        ? {
+            ...this.activeIndexByFamily,
+            antigravity: this.activeIndex,
+            gemini: this.activeIndex,
+          }
+        : {
+            antigravity: this.activeIndex,
+            gemini: this.activeIndex,
+          },
     };
 
     try {
       fs.writeFileSync(storagePath, JSON.stringify(storage, null, 2), 'utf-8');
     } catch (error) {
-      console.error('Failed to save account storage:', error);
+      this.logger.error('AccountRotator', 'Failed to save account storage', error);
     }
   }
 

@@ -97,4 +97,20 @@ describe('AccountRotator', () => {
       
       expect(rotator.getCurrentAccount()?.refreshToken).toBe('t1');
   });
+
+  it('should prioritize gemini family active index', () => {
+      const accounts = [createAccount('t1'), createAccount('t2'), createAccount('t3')];
+      const activeIndexByFamily = { gemini: 2, claude: 0 };
+      const rotator = new AccountRotator(accounts, 0, activeIndexByFamily);
+      
+      expect(rotator.getCurrentAccount()?.refreshToken).toBe('t3');
+  });
+
+  it('should fallback to global active index if gemini family index is missing', () => {
+    const accounts = [createAccount('t1'), createAccount('t2'), createAccount('t3')];
+    const activeIndexByFamily = { claude: 2 };
+    const rotator = new AccountRotator(accounts, 1, activeIndexByFamily);
+    
+    expect(rotator.getCurrentAccount()?.refreshToken).toBe('t2');
+  });
 });

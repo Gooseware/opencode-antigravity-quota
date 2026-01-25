@@ -1,6 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
+import { getLogger } from '../utils/logger';
 
 export interface AccountMetadataV3 {
   refreshToken: string;
@@ -14,11 +15,18 @@ export interface AccountStorageV3 {
   version: number;
   accounts: AccountMetadataV3[];
   activeIndex: number;
+  activeIndexByFamily?: {
+    claude?: number;
+    gemini?: number;
+    antigravity?: number;
+  };
 }
 
 export class TokenStorageReader {
   private accounts!: AccountMetadataV3[];
   private activeIndex!: number;
+  private activeIndexByFamily?: { claude?: number; gemini?: number; antigravity?: number };
+  private logger = getLogger();
 
   constructor() {
     if (!(this instanceof TokenStorageReader)) {
@@ -38,11 +46,15 @@ export class TokenStorageReader {
     return this.activeIndex;
   }
 
+  public getActiveIndexByFamily() {
+    return this.activeIndexByFamily;
+  }
+
   private load(): void {
     const storagePath = this.getStoragePath();
 
     if (!fs.existsSync(storagePath)) {
-      console.warn(`Token storage file not found at ${storagePath}`);
+      this.logger.warn('TokenStorageReader', `Token storage file not found at ${storagePath}`);
       return;
     }
 
@@ -51,16 +63,17 @@ export class TokenStorageReader {
       const data = JSON.parse(content);
 
       if (data.version !== 3) {
-        console.warn(`Unsupported storage version: ${data.version}. Expected version 3.`);
+        this.logger.warn('TokenStorageReader', `Unsupported storage version: ${data.version}. Expected version 3.`);
         return;
       }
 
       const storage = data as AccountStorageV3;
       this.accounts = storage.accounts || [];
       this.activeIndex = storage.activeIndex ?? -1;
+      this.activeIndexByFamily = storage.activeIndexByFamily;
 
     } catch (error) {
-      console.error('Failed to parse token storage file:', error);
+      this.logger.error('TokenStorageReader', 'Failed to parse token storage file', error);
     }
   }
 

@@ -1,11 +1,5 @@
 import type { AccountMetadataV3 } from '../types';
-import fs from 'fs';
-
-const LOG_FILE = '/tmp/autopilot.log';
-function logToFile(message: string): void {
-  const timestamp = new Date().toISOString();
-  fs.appendFileSync(LOG_FILE, `[${timestamp}] ${message}\n`);
-}
+import { getLogger } from '../utils/logger';
 
 // Import types and utilities from opencode-antigravity-quota
 interface CloudCodeQuotaInfo {
@@ -74,11 +68,14 @@ export class AuthenticationError extends Error {
 
 
 export class ApiQuotaPoller {
+  private logger!: ReturnType<typeof getLogger>;
+
   constructor() {
     if (!(this instanceof ApiQuotaPoller)) {
       // @ts-ignore
       return new ApiQuotaPoller();
     }
+    this.logger = getLogger();
   }
 
   private async refreshAccessToken(refreshToken: string): Promise<string> {
@@ -101,8 +98,8 @@ export class ApiQuotaPoller {
       });
 
       if (!response.ok) {
-        logToFile(`Token refresh failed: ${response.status}`);
-        if (response.status === 401 || response.status === 403) {
+        this.logger.error('ApiQuotaPoller', `Token refresh failed: ${response.status}`);
+        if (response.status === 400 || response.status === 401 || response.status === 403) {
           throw new AuthenticationError(`Token refresh failed (${response.status})`);
         }
         throw new Error(`Token refresh failed (${response.status})`);
@@ -111,7 +108,7 @@ export class ApiQuotaPoller {
       const data = (await response.json()) as TokenResponse;
       return data.access_token;
     } catch (e: any) {
-      logToFile(`Token refresh error: ${e.message}`);
+      this.logger.error('ApiQuotaPoller', `Token refresh error: ${e.message}`);
       throw e;
     } finally {
       clearTimeout(timeout);
@@ -135,7 +132,7 @@ export class ApiQuotaPoller {
       });
 
       if (!response.ok) {
-        logToFile(`loadCodeAssist failed: ${response.status}`);
+        this.logger.error('ApiQuotaPoller', `loadCodeAssist failed: ${response.status}`);
         throw new Error(`loadCodeAssist failed (${response.status})`);
       }
       return (await response.json()) as LoadCodeAssistResponse;
@@ -174,7 +171,7 @@ export class ApiQuotaPoller {
       });
 
       if (!response.ok) {
-        logToFile(`fetchAvailableModels failed: ${response.status}`);
+        this.logger.error('ApiQuotaPoller', `fetchAvailableModels failed: ${response.status}`);
         throw new Error(`fetchModels failed (${response.status})`);
       }
       return (await response.json()) as CloudCodeQuotaResponse;
@@ -231,7 +228,7 @@ export class ApiQuotaPoller {
       if (error instanceof AuthenticationError) {
         throw error;
       }
-      logToFile(`Failed to check quota via API: ${error}`);
+      this.logger.error('ApiQuotaPoller', `Failed to check quota via API: ${error}`);
       return [];
     }
   }
@@ -244,10 +241,15 @@ export class ApiQuotaPoller {
 
     // Try partial match (e.g., "gemini-3-pro" matches "Gemini 3 Pro")
     if (!model) {
-      const normalizedSearch = modelName.toLowerCase().replace(/[-_]/g, ' ');
+      const normalizedSearch = modelName
+        .toLowerCase()
+        .replace(/^google\/antigravity-/, '')
+        .replace(/^anthropic\/antigravity-/, '')
+        .replace(/[-_]/g, ' ');
+      
       model = models.find(m =>
-        m.model.toLowerCase().includes(normalizedSearch) ||
-        m.displayName.toLowerCase().includes(normalizedSearch)
+        m.model.toLowerCase().replace(/[-_]/g, ' ').includes(normalizedSearch) ||
+        m.displayName.toLowerCase().replace(/[-_]/g, ' ').includes(normalizedSearch)
       );
     }
 

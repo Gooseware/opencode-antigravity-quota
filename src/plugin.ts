@@ -3,12 +3,12 @@ import { QuotaCacheUpdater } from './quota/QuotaCacheUpdater';
 import { HardLimitDetector } from './rotation/HardLimitDetector';
 import type { PluginConfig } from './types';
 import { translateModelName, formatModelQuotaForToast } from './utils/model-name-translator';
+import { getLogger } from './utils/logger';
 import fs from 'fs';
 
-const LOG_FILE = '/tmp/autopilot.log';
+const logger = getLogger();
 function logToFile(message: string): void {
-  const timestamp = new Date().toISOString();
-  fs.appendFileSync(LOG_FILE, `[${timestamp}] [Plugin] ${message}\n`);
+  logger.info('Plugin', message);
 }
 
 // Configuration

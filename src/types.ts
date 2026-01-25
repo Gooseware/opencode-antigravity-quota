@@ -22,6 +22,7 @@ export interface AccountStorageV3 {
   activeIndexByFamily?: {
     claude?: number;
     gemini?: number;
+    antigravity?: number;
   };
 }
 

@@ -32,8 +32,9 @@ export class HardLimitDetector {
     this.tokenReader = new TokenStorageReader();
     const accounts = this.tokenReader.getAccounts();
     const activeIndex = this.tokenReader.getActiveIndex();
+    const activeIndexByFamily = this.tokenReader.getActiveIndexByFamily();
 
-    this.rotator = new AccountRotator(accounts, activeIndex);
+    this.rotator = new AccountRotator(accounts, activeIndex, activeIndexByFamily);
     this.apiPoller = new ApiQuotaPoller();
     this.quotaThreshold = config?.quotaThreshold || 0.02;
     this.quotaTracker = new QuotaTracker(this.quotaThreshold);

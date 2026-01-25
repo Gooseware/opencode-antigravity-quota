@@ -48,8 +48,9 @@ export class QuotaManager {
     this.tokenReader = new TokenStorageReader();
     const accounts = this.tokenReader.getAccounts();
     const activeIndex = this.tokenReader.getActiveIndex();
+    const activeIndexByFamily = this.tokenReader.getActiveIndexByFamily();
 
-    this.rotator = new AccountRotator(accounts, activeIndex);
+    this.rotator = new AccountRotator(accounts, activeIndex, activeIndexByFamily);
     this.lspFinder = new LSPFinder();
     this.poller = new QuotaPoller();
     this.apiPoller = new ApiQuotaPoller();
